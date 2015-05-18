@@ -1,10 +1,17 @@
 # Build Folders (you can keep bin if you'd like, to store dlls and pdbs)
 [Dd]ebug*/
+[Rr]elease*/
+x64/
 [Bb]in
-obj/
+[Oo]bj/
+[Pp]ackages
+![Pp]ackages/**/*.targets
 *.suo
 *.user
 _ReSharper*/
 
 # mstest test results
 [Tt]est[Rr]esult*
+
+#Route files - provide your own files
+*.gpx

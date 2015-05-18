@@ -42,9 +42,11 @@
     <Reference Include="System.Xml" />
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="MyDirectionsResponse.cs" />
     <Compile Include="gpx.cs">
       <DependentUpon>gpx.xsd</DependentUpon>
     </Compile>
+    <Compile Include="Node.cs" />
     <Compile Include="RankedRoute.cs" />
     <Compile Include="RouteReader.cs" />
     <Compile Include="GpxManipulator.cs" />

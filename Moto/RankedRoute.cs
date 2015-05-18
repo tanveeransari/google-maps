@@ -6,11 +6,11 @@ using System.Threading.Tasks;
 
 namespace Moto
 {
-    public class RankedRoute
+    public class RankedRoute : INode
     {
+        #region ctor
         public RankedRoute()
         {
-
         }
 
         public RankedRoute(string[] fields)
@@ -23,9 +23,10 @@ namespace Moto
             {
                 this.States = fields[2].Split(',').ToList();
             }
-            this.Rating = double.Parse(fields[3]);
 
-        }
+            this.Rating = double.Parse(fields[3]);
+        } 
+        #endregion
 
         public string Name { get; set; }
 
@@ -41,7 +42,21 @@ namespace Moto
 
         public override string ToString()
         {
+            if (Length.HasValue)
+            {
+                return string.Format("{0} : Rating {1} Length: {2} miles", Name, Rating.ToString("N1"), Length.Value.ToString("N0"));
+            }
             return string.Format("{0} : Rating {1}", Name, Rating.ToString("N0"));
+        }
+
+        public NodeType GetNodeType()
+        {
+            return NodeType.GPX;
+        }
+
+        public NodeType NodeType
+        {
+            get { return NodeType.GPX; }
         }
     }
 }

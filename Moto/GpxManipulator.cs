@@ -23,6 +23,7 @@ namespace Moto
 {
     internal static class GpxManipulator
     {
+        public const double METERS_TO_MILES = 0.000621371;
         static internal gpxType ConvertGoogleDirectionsToGpx(DirectionsResponse directions)
         {
             if (!directions.Routes.Any() || !directions.Routes.First().Legs.Any()) return null;
@@ -64,7 +65,7 @@ namespace Moto
             return new RankedRoute()
             {
                 Length = route.Length,
-                Name = route.Length + ":REVERSE",
+                Name = route.Name + ":REVERSE",
                 Rank = route.Rank,
                 Rating = route.Rating,
                 Route = ReverseRoute(route.Route),
@@ -116,8 +117,62 @@ namespace Moto
                     totDistInMetres += distInMetres;
                 }
             }
-            double distInMiles = 0.000621371 * totDistInMetres;
+            double distInMiles = METERS_TO_MILES * totDistInMetres;
             return distInMiles;
+        }
+
+        internal static gpxType ConvertToSingleGPX(List<INode> directions)
+        {
+            List<wptType> totalRoute = new List<wptType>();
+
+            gpxType rt = new gpxType()
+            {
+                creator = "Tanveer Ansari",
+                trk = new trkType[1]
+            };
+            ((rt.trk[0] = new trkType()).trkseg = new trksegType[1])[0] = new trksegType();
+
+            foreach (INode node in directions)
+            {
+                gpxType oneRoute = null;
+                switch (node.NodeType)
+                {
+                    case NodeType.GPX:
+                        oneRoute = ((Moto.RankedRoute)node).Route;
+                        break;
+                    case NodeType.DrivingDirection:
+                        oneRoute = ConvertGoogleDirectionsToGpx(((MyDirectionsResponse)node).Directions);
+                        break;
+                    default:
+                        break;
+                }
+
+                wptType[] wayPoints = oneRoute.trk[0].trkseg[0].trkpt;
+                totalRoute.AddRange(wayPoints);
+            }
+
+            rt.trk[0].trkseg[0].trkpt = totalRoute.ToArray();
+            return rt;
+        }
+
+        internal static string GetStartPointFromNode(INode nextNode)
+        {
+            if (nextNode.NodeType == NodeType.DrivingDirection)
+            {
+                DirectionsResponse directions = ((MyDirectionsResponse)nextNode).Directions;
+                return Utility.FormatLatLongForWayPoint(
+                directions.Routes.First().Legs.First().Steps.First().StartLocation.Latitude,
+                directions.Routes.First().Legs.First().Steps.First().StartLocation.Longitude);
+            }
+            else if (nextNode.NodeType == NodeType.GPX)
+            {
+                wptType wpt = ((Moto.RankedRoute)nextNode).Route.trk[0].trkseg[0].trkpt[0];
+                return Utility.FormatLatLongForWayPoint(wpt.lat, wpt.lon);
+            }
+            else
+            {
+                throw new InvalidOperationException("Wrong node type passed");
+            }
         }
     }
 }
