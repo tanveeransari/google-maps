@@ -1,0 +1,101 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<ClassDiagram MajorVersion="1" MinorVersion="1">
+  <Class Name="Moto.gpxType">
+    <Position X="8" Y="0.5" Width="1.5" />
+    <TypeIdentifier>
+      <HashCode>AASAACAAAABAAAAACAEAAAAAASAQABEAAAAACAAIAAA=</HashCode>
+      <FileName>gpx.cs</FileName>
+    </TypeIdentifier>
+  </Class>
+  <Class Name="Moto.metadataType" Collapsed="true">
+    <Position X="4" Y="1.5" Width="1.5" />
+    <TypeIdentifier>
+      <HashCode>AAGBABEAAAAAAAAgAIEAAIAACAAkQABAgAACAAAIQEA=</HashCode>
+      <FileName>gpx.cs</FileName>
+    </TypeIdentifier>
+  </Class>
+  <Class Name="Moto.personType" Collapsed="true">
+    <Position X="5.75" Y="1.5" Width="1.5" />
+    <TypeIdentifier>
+      <HashCode>AAAAAAAAAAAAAAAgAIIAAAAAAAAkAAAAAAAAAAAAAEA=</HashCode>
+      <FileName>gpx.cs</FileName>
+    </TypeIdentifier>
+  </Class>
+  <Class Name="Moto.emailType" Collapsed="true">
+    <Position X="4" Y="0.5" Width="1.5" />
+    <TypeIdentifier>
+      <HashCode>AAAAAAAAAAAAAAAAAAACAAAAAAAAACAAAAAAAAAAAwA=</HashCode>
+      <FileName>gpx.cs</FileName>
+    </TypeIdentifier>
+  </Class>
+  <Class Name="Moto.trksegType">
+    <Position X="2.25" Y="2.5" Width="1.5" />
+    <TypeIdentifier>
+      <HashCode>AAAAAAAAAAAABAAAAAEBAAAAAAAAAAAAAAAAAAAIAAA=</HashCode>
+      <FileName>gpx.cs</FileName>
+    </TypeIdentifier>
+  </Class>
+  <Class Name="Moto.wptType">
+    <Position X="10" Y="0.5" Width="1.5" />
+    <Compartments>
+      <Compartment Name="Fields" Collapsed="true" />
+    </Compartments>
+    <TypeIdentifier>
+      <HashCode>AAAFYBAkkIgWEIRALIeAKACABQA1ZoBQ4AQAAIBISEA=</HashCode>
+      <FileName>gpx.cs</FileName>
+    </TypeIdentifier>
+  </Class>
+  <Class Name="Moto.linkType" Collapsed="true">
+    <Position X="2.25" Y="1.5" Width="1.5" />
+    <TypeIdentifier>
+      <HashCode>AAAAAABAAAACAAAAAAAAAAAAAAADAAAIAAAAQAAAAAA=</HashCode>
+      <FileName>gpx.cs</FileName>
+    </TypeIdentifier>
+  </Class>
+  <Class Name="Moto.extensionsType" Collapsed="true">
+    <Position X="5.75" Y="0.5" Width="1.5" />
+    <TypeIdentifier>
+      <HashCode>IAAQAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=</HashCode>
+      <FileName>gpx.cs</FileName>
+    </TypeIdentifier>
+  </Class>
+  <Class Name="Moto.trkType">
+    <Position X="12" Y="0.5" Width="1.5" />
+    <Compartments>
+      <Compartment Name="Fields" Collapsed="true" />
+    </Compartments>
+    <TypeIdentifier>
+      <HashCode>AAAAAAAAACgCQARAIIEAAAAAAAA1AgBAgAAAAAAIAEA=</HashCode>
+      <FileName>gpx.cs</FileName>
+    </TypeIdentifier>
+  </Class>
+  <Class Name="Moto.rteType" Collapsed="true">
+    <Position X="0.5" Y="2.5" Width="1.5" />
+    <TypeIdentifier>
+      <HashCode>AAAAAAAAAAgDQARAIIEAAAAAAAAlAgBAgABAAAAIAEA=</HashCode>
+      <FileName>gpx.cs</FileName>
+    </TypeIdentifier>
+  </Class>
+  <Class Name="Moto.boundsType" Collapsed="true">
+    <Position X="0.5" Y="0.5" Width="1.5" />
+    <TypeIdentifier>
+      <HashCode>AAAAAAAAQCAAAAAAIBAAAAAgAAgAAAAAAAAAAAAABAA=</HashCode>
+      <FileName>gpx.cs</FileName>
+    </TypeIdentifier>
+  </Class>
+  <Class Name="Moto.copyrightType" Collapsed="true">
+    <Position X="2.25" Y="0.5" Width="1.5" />
+    <TypeIdentifier>
+      <HashCode>AAAEAAEAAAAAAAAAAAAAAIAAAAAAAAAAAAAYAAgAAAA=</HashCode>
+      <FileName>gpx.cs</FileName>
+    </TypeIdentifier>
+  </Class>
+  <Enum Name="Moto.fixType" Collapsed="true">
+    <Position X="0.5" Y="3.75" Width="1.5" />
+    <TypeIdentifier>
+      <HashCode>AQABEAAAAAAAAAAAAAAgAAAAAAAAAAAAAAAAQAAAAAA=</HashCode>
+      <FileName>gpx.cs</FileName>
+    </TypeIdentifier>
+  </Enum>
+  <Font Name="Tahoma" Size="8.25" />
+</ClassDiagram>
