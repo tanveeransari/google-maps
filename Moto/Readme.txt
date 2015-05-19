@@ -2,4 +2,4 @@
 Used this file to read all gpx files
 
 Store all gpx files keyed by the lat/long of their start and end points. 
-We shall use the start and end points of these mototracks to do a rough initial calculation, and figure out if any tracks are near our route
+Use the start and end points of these mototracks to do a rough initial calculation, and figure out if any tracks are near our route

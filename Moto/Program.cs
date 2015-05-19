@@ -26,9 +26,10 @@ namespace Moto
     class Program
     {
         public const int MIN_RATING = 3;
-        private const AvoidWay AVOID = /*AvoidWay.Tolls | */AvoidWay.Highways;
         public static int MAXDETOUR_CROW_PERTWISTY = 25;
-        public static double MAX_EXTRA_LENGTH_MILES = 200;
+        public static double MAX_EXTRA_LENGTH_MILES = 250;
+
+        private const AvoidWay AVOID = /*AvoidWay.Tolls | */AvoidWay.Highways;
 
         private static string FilesDirPath;
         #region Members
@@ -36,10 +37,10 @@ namespace Moto
         // Start Address
         private static string origin = "916 N Taylor Ave, Oak park, IL";
         // End Address
-        private static string destination = "St Louis, MO";
+        private static string destination = "new orleans, LA";
 
         //All Twisties in USA
-        private static Dictionary<RouteKey, Moto.RankedRoute> routes;
+        private static Dictionary<TwistyKey, Moto.RankedRoute> routes;
 
         #endregion
 
@@ -63,10 +64,6 @@ namespace Moto
 #endif
             #endregion
 
-            // Get directions
-            // Find first twisty near route
-            // Make 3 step direction  - dirn to twisty start, twisty and direction from twisty end to destination
-            // Repeat with each direction ignoring twisty already being driven
 
             var drivingDirectionRequest = new DirectionsRequest
             {
@@ -94,121 +91,27 @@ namespace Moto
             List<INode> directions = new List<INode>();
             directions.Add(new MyDirectionsResponse(googDirns));
             AddTwisties(ref directions, ref twistyAlreadyInRoute);
-            RouteReader.WriteGPXFile(GpxManipulator.ConvertToSingleGPX(directions), FilesDirPath + "\\tanveer.gpx");
-#if IterateLegsFindTwisties
-
-            // Twisties mapped to Direction Legs, sorted by distance
-            Dictionary<RouteKey, SortedDictionary<double, Step>> twistyDistanceToLeg = new Dictionary<RouteKey, SortedDictionary<double, Step>>();
-            Debug.Assert(drivingDirections.Routes.First().Legs.Count() <= 1, "Found directions with more than one leg");
-
-            // Iterate over all legs and find the earliest leg and the nearest twisty to that leg
-            foreach (var leg in drivingDirections.Routes.First().Legs)
+            Console.WriteLine("-------------------------------------" + Environment.NewLine);
+            directions.ForEach(d =>
             {
-                foreach (var step in leg.Steps)
+                if (d.NodeType == NodeType.DrivingDirection)
                 {
-                    GeoCoordinate startCoOrd = new GeoCoordinate(step.StartLocation.Latitude, step.StartLocation.Longitude);
-                    double distance; ;
-                    RouteKey routeNearStep = FindNearestRouteWithinDistance(startCoOrd, twistyAlreadyInRoute, out distance);
-                    if (routeNearStep != null)
-                    {
-                        // If we have already found a twisty all we are now doing is finding the nearest leg to that twisty
-                        if (twistyDistanceToLeg.Keys.Count >= 1)
-                        {
-                            if (twistyDistanceToLeg.Keys.First() == routeNearStep)
-                            {
-                                twistyDistanceToLeg[routeNearStep].Add(distance, step);
-                            }
-                            Debug.WriteLine("Ignoring twisty {0} as we already have{1}", routeNearStep.RouteName, twistyDistanceToLeg.First().Key.RouteName);
-                            continue;
-                        }
-
-                        if (!twistyDistanceToLeg.ContainsKey(routeNearStep))
-                        {
-                            twistyDistanceToLeg.Add(routeNearStep, new SortedDictionary<double, Step>());
-                        }
-
-                        twistyDistanceToLeg[routeNearStep].Add(distance, step);
-
-                        Debug.WriteLine(" *****  ****  Found twisty on our route");
-                        Debug.WriteLine("{0} is {1} km from {2}", routeNearStep.RouteName,
-                        (distance / 1000).ToString("N2"),
-                        StripHTML(step.HtmlInstructions));
-
-                        if (twistyDistanceToLeg.Keys.Count > 1)
-                        {
-                            throw new InvalidOperationException("We will only consider one twisty at a time");
-                        }
-                    }
+                    PrintDirections(((MyDirectionsResponse)d).Directions);
                 }
-            }
+                else Console.WriteLine(" {0} ***   {1}    ***  {0} {0}", "\n", d);
+            });
 
-            // We are limited to using only 8 waypoints max
-            Debug.Assert(twistyDistanceToLeg.Keys.Count <= 1, "More than one twisty is being looked at");
-            if (twistyDistanceToLeg.Any())
-            {
-                var legToDetourFrom = twistyDistanceToLeg[twistyDistanceToLeg.Keys.First()].First().Value;
-
-                //Is twisty to be traversed from start->end or end->start (Which endpoint nearer us)
-                GeoCoordinate startCoOrd = new GeoCoordinate(legToDetourFrom.StartLocation.Latitude, legToDetourFrom.StartLocation.Longitude);
-
-                double distanceToTwistyStart = startCoOrd.GetDistanceTo(twistyDistanceToLeg.Keys.First().Start);
-                double distanceToTwistyEnd = startCoOrd.GetDistanceTo(twistyDistanceToLeg.Keys.First().End);
-
-                Moto.RankedRoute twisty = routes[twistyDistanceToLeg.Keys.First()];
-                gpxType twistyRoute = twisty.Route;
-
-                string wayPointLegStart = Utility.FormatLatLongForWayPoint(startCoOrd.Latitude, startCoOrd.Longitude);
-                string firstRouteEnd = Utility.FormatLatLongForWayPoint(
-                    twistyRoute.trk[0].trkseg[0].trkpt[0].lat,
-                    twistyRoute.trk[0].trkseg[0].trkpt[0].lon);
-
-                string secondRouteStart = Utility.FormatLatLongForWayPoint(
-                    twistyRoute.trk[0].trkseg[0].trkpt.Last().lat,
-                    twistyRoute.trk[0].trkseg[0].trkpt.Last().lon
-                    );
-
-                if (distanceToTwistyEnd < distanceToTwistyStart)
-                {
-                    string tmp = secondRouteStart;
-                    secondRouteStart = firstRouteEnd;
-                    firstRouteEnd = tmp;
-                    // gpxType rvrsRoute = GpxManipulator.ReverseRoute(twistyRoute);
-                }
-
-                drivingDirectionRequest = new DirectionsRequest
-                {
-                    Origin = origin,
-                    Destination = firstRouteEnd,
-                    Avoid = AvoidWay.Highways
-                };
-
-                //Don't add a waypoint to step start - head straight to the twisty
-                //(drivingDirectionRequest.Waypoints = new string[1])[0] = wayPointLegStart;
-
-                var drivingDirectionRequest2 = new DirectionsRequest
-                {
-                    Origin = secondRouteStart,
-                    Destination = destination,
-                    Avoid = AvoidWay.Highways
-                };
-                // Get Driving Directions from Google
-                drivingDirections = GoogleMaps.Directions.Query(drivingDirectionRequest);
-                DirectionsResponse drivingDirections2 = GoogleMaps.Directions.Query(drivingDirectionRequest);
-                PrintDirections(drivingDirections);
-                PrintDirections(drivingDirections2);
-            }
-            else
-            {
-                PrintDirections(drivingDirections);
-            }
-
-#endif
-
+            string fileName = origin + destination + ".gpx";
+            RouteReader.WriteGPXFile(GpxManipulator.ConvertToSingleGPX(directions), FilesDirPath + "\\" + fileName);
             Console.ReadKey();
         }
 
         private static void AddTwisties(ref List<INode> nodes, ref List<Moto.RankedRoute> twistysAlreadyInRoute)
         {
+            if (nodes.Count != 1) throw new InvalidOperationException("AddTwisties was passed a route list with count <> 1");
+
+            Location finalDestLoc = ((MyDirectionsResponse)nodes[0]).Directions.Routes.First().Legs.Last().EndLocation;
+            GeoCoordinate finalDest = new GeoCoordinate(finalDestLoc.Latitude, finalDestLoc.Longitude);
 
             double milesAddedToRoute = 0;
 
@@ -223,7 +126,7 @@ namespace Moto
                 Debug.Assert(drivingDirections.Routes.Count() == 1, " Directions have zero or more than one route");
                 Debug.Assert(drivingDirections.Routes.First().Legs.Count() == 1, "Route has zero or more than one leg");
 
-                Dictionary<RouteKey, SortedDictionary<double, Step>> twistyDistanceToLeg = new Dictionary<RouteKey, SortedDictionary<double, Step>>();
+                Dictionary<TwistyKey, SortedDictionary<double, Step>> twistyDistanceToLeg = new Dictionary<TwistyKey, SortedDictionary<double, Step>>();
                 Leg leg = drivingDirections.Routes.First().Legs.First();
 
                 // Find a twisty near earliest step. Then find step closest to that twisty
@@ -231,14 +134,17 @@ namespace Moto
                 {
                     foreach (var step in leg.Steps)
                     {
-                        GeoCoordinate startCoOrd = new GeoCoordinate(step.StartLocation.Latitude, step.StartLocation.Longitude);
+                        GeoCoordinate stepStart = new GeoCoordinate(step.StartLocation.Latitude, step.StartLocation.Longitude);
                         double distance;
-                        RouteKey routeNearStep = FindNearestRouteWithinDistance(startCoOrd, twistysAlreadyInRoute, short.MaxValue, out distance);
+                        TwistyKey routeNearStep = FindTwisty(stepStart, finalDest, twistysAlreadyInRoute,
+                            MAX_EXTRA_LENGTH_MILES * 5, out distance);
+
                         if (routeNearStep != null)
                         {
                             // If we have already found a twisty all we are now doing is finding the nearest leg to that twisty
                             if (twistyDistanceToLeg.Keys.Count >= 1)
                             {
+                                // If we are looking at the same twisty already chosen, add distance from this step
                                 if (twistyDistanceToLeg.Keys.First() == routeNearStep)
                                 {
                                     if (!twistyDistanceToLeg[routeNearStep].ContainsKey(distance))
@@ -246,25 +152,17 @@ namespace Moto
                                         twistyDistanceToLeg[routeNearStep].Add(distance, step);
                                     }
                                 }
-                                //Console.WriteLine("Ignoring twisty {0} as we already have{1}", routeNearStep.RouteName, twistyDistanceToLeg.First().Key.RouteName);
-                                continue;
+                                // Don't go any further - we don't want to add a second twisty here
+                                //continue;
                             }
-
-                            if (!twistyDistanceToLeg.ContainsKey(routeNearStep))
+                            else if (!twistyDistanceToLeg.ContainsKey(routeNearStep))
                             {
+                                //We are adding the first twisty found
                                 twistyDistanceToLeg.Add(routeNearStep, new SortedDictionary<double, Step>());
+                                twistyDistanceToLeg[routeNearStep].Add(distance, step);
+                                Debug.Assert(twistyDistanceToLeg.Keys.Count == 1, " Twisty count <> 1");
                             }
-
-                            twistyDistanceToLeg[routeNearStep].Add(distance, step);
-
-                            //Console.WriteLine(" *****  ****  Found twisty on our route");
-                            //Console.WriteLine("{0} is {1} km from {2}", routeNearStep.RouteName,(distance / 1000).ToString("N2"),
-                            //StripHTML(step.HtmlInstructions));
-
-                            if (twistyDistanceToLeg.Keys.Count > 1)
-                            {
-                                throw new InvalidOperationException("We will only consider one twisty at a time");
-                            }
+                            //twistyDistanceToLeg[routeNearStep].Add(distance, step);
                         }
                     }
                 }
@@ -284,10 +182,10 @@ namespace Moto
                     Moto.RankedRoute twisty = routes[twistyDistanceToLeg.Keys.First()];
                     gpxType twistyRoute = twisty.Route;
 
-                    string wayPointLegStart = Utility.FormatLatLongForWayPoint(startCoOrd.Latitude, startCoOrd.Longitude);
+                    string firstRouteStart = Utility.FormatLatLongForWayPoint(startCoOrd.Latitude, startCoOrd.Longitude);
                     string firstRouteEnd = Utility.FormatLatLongForWayPoint(
-                        twistyRoute.trk[0].trkseg[0].trkpt[0].lat,
-                        twistyRoute.trk[0].trkseg[0].trkpt[0].lon);
+                        twistyRoute.trk[0].trkseg[0].trkpt.First().lat,
+                        twistyRoute.trk[0].trkseg[0].trkpt.First().lon);
 
                     string secondRouteStart = Utility.FormatLatLongForWayPoint(
                         twistyRoute.trk[0].trkseg[0].trkpt.Last().lat,
@@ -306,17 +204,22 @@ namespace Moto
 
                     double oldDistance = drivingDirections.Routes.First().Legs.First().Distance.Value * GpxManipulator.METERS_TO_MILES;
 
-                    System.Threading.Thread.Sleep(500);
-                    var drivingDirectionRequest1 = new DirectionsRequest { Origin = origin, Destination = firstRouteEnd, Avoid = Program.AVOID };
+                    System.Threading.Thread.Sleep(400);
+                    var drivingDirectionRequest1 = new DirectionsRequest
+                    {
+                        Origin = drivingDirections.Routes.First().Legs.First().Steps.First().StartLocation.LocationString,
+                        Destination = firstRouteEnd,
+                        Avoid = Program.AVOID
+                    };
                     var ddResp1 = GoogleMaps.Directions.Query(drivingDirectionRequest1);
-                    System.Threading.Thread.Sleep(500);
-                    
+
+                    System.Threading.Thread.Sleep(400);
                     var drivingDirectionRequest2 = new DirectionsRequest { Origin = secondRouteStart, Destination = destination, Avoid = Program.AVOID };
                     if (nodes.Count > i)
-                    { 
+                    {
                         //We must route second leg to next destination on journey, not to final destination
                         INode nextNode = nodes[i];
-                        drivingDirectionRequest2.Destination = GpxManipulator.GetStartPointFromNode(nextNode);
+                        drivingDirectionRequest2.Destination = GpxManipulator.GetRouteEndPoint(nextNode);
                     }
 
                     var ddResp2 = GoogleMaps.Directions.Query(drivingDirectionRequest2);
@@ -327,13 +230,18 @@ namespace Moto
                     double increaseInRouteLength = newDistance - oldDistance;
                     if (milesAddedToRoute + increaseInRouteLength < MAX_EXTRA_LENGTH_MILES)
                     {
-                        milesAddedToRoute = increaseInRouteLength;
-                        // Get Driving Directions from Google
+                        milesAddedToRoute += increaseInRouteLength;
                         nodes.RemoveAt(i - 1);
+                        //Add descending so order of the three is maintained
+                        nodes.Insert(i - 1, new MyDirectionsResponse(ddResp2));
+                        nodes.Insert(i - 1, twisty);
                         nodes.Insert(i - 1, new MyDirectionsResponse(ddResp1));
-                        nodes.Insert(i, twisty);
-                        nodes.Insert(i + 1, new MyDirectionsResponse(ddResp2));
-                        i = i - 1;
+
+                        //nodes.Insert(i - 1, new MyDirectionsResponse(ddResp1));
+                        //nodes.Insert(i, twisty);
+                        //nodes.Insert(i + 1, new MyDirectionsResponse(ddResp2));
+                        //i = i - 1; // Don't decrement counter to start routing again from first step - only route from last step
+                        Debug.WriteLine("Added ", twisty.Name);
                         Console.WriteLine("Added {0} ", twisty.Name);
                     }
                     else
@@ -345,47 +253,72 @@ namespace Moto
                     }
                 }
                 else
-                {
-                    // no twisties found
-                }
+                { /**no twisties found**/}
             }
         }
 
         /// <summary>
         /// Find the nearest twisty to a point, if any
         /// </summary>
-        /// <param name="startCoOrd">Point to compare against</param>
-        /// <param name="distance">Max distance as crow flies to start of twisty</param>
+        /// <param name="stepStart">Point to compare against</param>
+        /// <param name="distanceToTwisty">Max distance as crow flies to start of twisty</param>
         /// <returns></returns>
-        private static RouteKey FindNearestRouteWithinDistance(GeoCoordinate startCoOrd, List<Moto.RankedRoute> twistysToAvoid,
-          double maxTwistyLength, out double distance)
+        private static TwistyKey FindTwisty(GeoCoordinate stepStart, GeoCoordinate destn, List<Moto.RankedRoute> twistysToAvoid,
+          double maxTwistyLength, out double distanceToTwisty)
         {
-            double distanceStart, distanceEnd;
-            distance = distanceStart = distanceEnd = 0;
+            distanceToTwisty = double.MaxValue;
+            double twistyRating = 0.0;
 
             if (routes == null || routes.Count == 0) return null;
-            RouteKey retVal = null;
+            TwistyKey retVal = null;
 
             var twistysToConsider = (from r in routes
                                      where !twistysToAvoid.Contains(r.Value)
                                      where r.Value.Length < maxTwistyLength
-                                     select r).ToList();
-            foreach (KeyValuePair<RouteKey, Moto.RankedRoute> twisty in twistysToConsider)
-            {
-                var key = twisty.Key;
-                double distanceToTwistyStart = startCoOrd.GetDistanceTo(key.Start) * GpxManipulator.METERS_TO_MILES;
-                double distanceToTwistyEnd = startCoOrd.GetDistanceTo(key.End) * GpxManipulator.METERS_TO_MILES;
+                                     select r).OrderByDescending(m => m.Value.Rating).ToList();
 
-                if (Math.Min(distanceToTwistyStart, distanceToTwistyEnd) < MAXDETOUR_CROW_PERTWISTY)
+            foreach (KeyValuePair<TwistyKey, Moto.RankedRoute> kvp in twistysToConsider)
+            {
+                var twstKey = kvp.Key;
+                double startToTwistyHead = stepStart.GetDistanceTo(twstKey.Start) * GpxManipulator.METERS_TO_MILES;
+                double startToTwistyTail = stepStart.GetDistanceTo(twstKey.End) * GpxManipulator.METERS_TO_MILES;
+
+                //double twistyHeadToDest = destn.GetDistanceTo(twstKey.Start) * GpxManipulator.METERS_TO_MILES;
+                //double twistyTailToDest = destn.GetDistanceTo(twstKey.End) * GpxManipulator.METERS_TO_MILES;
+
+                double iterDistanceToTwisty = Math.Min(startToTwistyHead, startToTwistyTail);
+                if (iterDistanceToTwisty < MAXDETOUR_CROW_PERTWISTY)
                 {
-                    if (retVal == null ||
-                        // If this twisty is nearer than the one we found before, replace the old one with this
-                        (retVal != null && (Math.Min(distanceToTwistyStart, distanceToTwistyEnd) < distance)))
+                    // Does end of twisty bring us closer to the destination than the start of twisty?
+                    GeoCoordinate dtrStart = (iterDistanceToTwisty == startToTwistyHead ? twstKey.Start : twstKey.End);
+                    GeoCoordinate dtrEnd = (iterDistanceToTwisty == startToTwistyHead ? twstKey.End : twstKey.Start);
+
+                    double dtrStartToDest = dtrStart.GetDistanceTo(destn) * GpxManipulator.METERS_TO_MILES;
+                    double dtrEndToDest = dtrEnd.GetDistanceTo(destn) * GpxManipulator.METERS_TO_MILES;
+
+                    bool dtrTakesUsCloserToDestn = dtrEndToDest < dtrStartToDest;
+
+                    string routeName = kvp.Value.Name;
+                    if (iterDistanceToTwisty == startToTwistyTail) routeName = routeName + ":REVERSE";
+
+                    if (dtrTakesUsCloserToDestn)
                     {
-                        retVal = key;
-                        distance = Math.Min(distanceToTwistyStart, distanceToTwistyEnd);
-                        distanceStart = distanceToTwistyStart;
-                        distanceEnd = distanceToTwistyEnd;
+                        // If this is the first twisty or if this one is nearer than existing and has equal or better ratings , use this
+                        if (retVal == null ||
+                            (retVal != null && (iterDistanceToTwisty < distanceToTwisty) && kvp.Value.Rating >= twistyRating))
+                        {
+                            retVal = twstKey;
+                            distanceToTwisty = iterDistanceToTwisty;
+                            twistyRating = kvp.Value.Rating;
+                            Debug.WriteLine("Considering {0} as it takes us {1} closer to destination",
+                                routeName, (int)(dtrStartToDest - dtrEndToDest));
+                        }
+                    }
+                    else
+                    {
+
+                        Debug.WriteLine("Ignoring {0} as it would take us {1} farther away from destination",
+                            routeName, (int)(dtrEndToDest - dtrStartToDest));
                     }
                 }
             }
@@ -397,38 +330,27 @@ namespace Moto
         /// Populate route dictionary with all routes
         /// </summary>
         /// <returns></returns>
-        private static Dictionary<RouteKey, Moto.RankedRoute> ReadRoutes()
+        private static Dictionary<TwistyKey, Moto.RankedRoute> ReadRoutes()
         {
-            var retVal = new Dictionary<RouteKey, Moto.RankedRoute>();
+            var retVal = new Dictionary<TwistyKey, Moto.RankedRoute>();
 
+            // Read csv file with names, statewise rank and ratings
             List<Moto.RankedRoute> dt = RouteReader.ReadRoutesCsv(FilesDirPath + "\\routeslist.csv");
 
-            #region Create Filters
-            Func<gpxType, bool> numPointsAcceptor = delegate(gpxType map)
-    {
-        return (map.trk.Length > 0 && map.trk[0].trkseg.Any()
-            && map.trk[0].trkseg[0].trkpt != null
-            && map.trk[0].trkseg[0].trkpt.Length > 0);
-    };
-
-            Func<gpxType, string, bool> ratingsAcceptor = delegate(gpxType map, string mapName)
+            Func<gpxType, bool> numPointsAcceptor = delegate(gpxType r)
             {
-                var matched = from x in dt where x.Name.Equals(mapName, StringComparison.InvariantCultureIgnoreCase) select x;
-                if (matched.Any())
-                {
-                    if (matched.First().Rating > MIN_RATING) return true;
-                }
-
-                return false;
+                return (r.trk.Length > 0 && r.trk[0].trkseg.Length > 0
+                    && r.trk[0].trkseg[0].trkpt != null && r.trk[0].trkseg[0].trkpt.Length > 0);
             };
-            #endregion
 
             Dictionary<string, gpxType> gpxFilesIntl = RouteReader.ReadGPXFiles(FilesDirPath);
             Dictionary<string, Moto.RankedRoute> gpxFiles = new Dictionary<string, Moto.RankedRoute>();
+
             foreach (KeyValuePair<string, gpxType> kvp in gpxFilesIntl)
             {
                 if (numPointsAcceptor(kvp.Value))
                 {
+                    // Find mtaching ranking/name info from csv file
                     var matched = from x in dt where x.Name.Equals(kvp.Key, StringComparison.InvariantCultureIgnoreCase) select x;
                     if (matched.Any())
                     {
@@ -449,20 +371,12 @@ namespace Moto
                 {
                     var gpx1 = kvp.Value.Route;
                     var trkPntArr = gpx1.trk[0].trkseg[0].trkpt;
-                    RouteKey key = new RouteKey(kvp.Key, trkPntArr.First(), trkPntArr.Last());
+                    TwistyKey key = new TwistyKey(kvp.Key, trkPntArr.First(), trkPntArr.Last());
                     retVal.Add(key, kvp.Value);
                     //Debug.WriteLine("{0} has {1} waypoints", kvp.Key, trkPntArr.Length);
                 }
             }
             return retVal;
-        }
-
-        private static void ShowGetDistance()
-        {
-            //GeoCoordinate firstPoint = new GeoCoordinate(latitude: (double)wptArr.First().lat, longitude: (double)wptArr.First().lon);
-            //GeoCoordinate lastPoint = new GeoCoordinate(latitude: (double)wptArr.Last().lat, longitude: (double)wptArr.Last().lon);
-            //double distInMetrese = firstPoint.GetDistanceTo(lastPoint);
-            //Console.WriteLine("{0} Distance Start:End ~ {1} km", kvp.Key, (distInMetrese / 1000).ToString("N2"));
         }
 
         private static void PrintDirections(DirectionsResponse directions)
@@ -472,7 +386,7 @@ namespace Moto
 
             foreach (Step step in leg.Steps)
             {
-                Console.WriteLine(StripHTML(step.HtmlInstructions));
+                Console.WriteLine(StripHTML(step.HtmlInstructions) + "  : " + (step.Distance.Value * GpxManipulator.METERS_TO_MILES).ToString("N2"));
             }
 
             Console.WriteLine();
@@ -482,30 +396,5 @@ namespace Moto
         {
             return Regex.Replace(html, @"<(.|\n)*?>", string.Empty);
         }
-
-        //private static Dictionary<RouteKey, double> FindRoutesWithinDistance(GeoCoordinate startCoOrd)
-        //{
-        //    if (routes == null || routes.Count == 0) return null;
-
-        //    Dictionary<RouteKey, double> retVal = new Dictionary<RouteKey, double>();
-        //    foreach (KeyValuePair<RouteKey, gpxType> twisty in routes)
-        //    {
-        //        var key = twisty.Key;
-        //        double distanceToTwistyStart = startCoOrd.GetDistanceTo(twisty.Key.Start);
-        //        double distanceToTwistyEnd = startCoOrd.GetDistanceTo(twisty.Key.End);
-
-        //        if (Math.Min(distanceToTwistyStart, distanceToTwistyEnd) < MaxDetourCrowPerTwisty)
-        //        {
-        //            retVal.Add(twisty.Key, Math.Min(distanceToTwistyStart, distanceToTwistyEnd));
-        //        }
-        //    }
-
-        //    if (retVal.Count > 0)
-        //    {
-        //        retVal.OrderBy(x => x.Value).ToList();
-        //        return retVal;
-        //    }
-        //    else return null;
-        //}
     }
 }
