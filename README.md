@@ -1,3 +1,10 @@
+
+Moto
+====
+This project builds upon google=maps.
+
+While google=maps does directions using the google directions API, this project modifies the routing to include twisty roads.
+
 google-maps
 ===========
 
